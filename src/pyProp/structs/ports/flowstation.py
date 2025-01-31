@@ -15,9 +15,29 @@ from ..gas import Gas
 from .port import Port
 
 class FlowStation(Port):
+    ''' FlowStation port
+    
+    Attributes:
+        static (:ref:`gas`): Gas object storing static fluid properties.
+        total (:ref:`gas`): Gas object storing total (a.k.a stagnation) fluid properties.
+        ondesign (bool): True if on-design, False if off-design.
+        MN (float): Fluid Mach number
+        V (float): Fluid speed [m/s]
+        A (float): Passage area [m^2]
+        mdot (float): Passage mass flow [kg/s]
+    '''
     __slots__ = ('static', 'total', 'ondesign', 'MN', 'V', 'A', 'mdot')
     
     def __init__(self, name, species=Air, Tref=298.15, Pref=101325):
+        '''FlowStation constructor
+        
+        Args:
+            name (str): FlowStation name.
+            species (:ref:`oxy`): Fluid species in the passage. Defaults to air.
+            Tref (float): Reference temperature (default 298.15 K)
+            Pref (float): Reference pressure (default 101325 Pa)
+        '''
+        
         super().__init__(name)
         
         # STATIC AND STAGNATION GAS PROPERTIES
@@ -35,6 +55,12 @@ class FlowStation(Port):
     
     
     def evaluate(self):
+        ''' Updates the physical flow and static quantities.
+        
+        Sets either area (on-design) or Mach number (off-design) of the fluid passing through a FlowStation. Once complete
+        updates the static quantities using the physical flow properties and the total fluid properties. Mass flow and the
+        appropriate area or Mach number value must be set before calling this function.        
+        '''
         if self.mdot is None:
             raise ValueError("mdot must be defined prior to setting A or MN")
         if self.ondesign and self.MN is not None:
@@ -67,30 +93,59 @@ class FlowStation(Port):
         
         
     def setTotal_TP(self, Tt, Pt):
+        ''' Sets total fluid properties based on inpupt total temperature and pressure.
+        
+        Args:
+            Tt (float): Total temperature [K]
+            Pt (float): Total pressure [Pa]
+        '''
         self.total.set_TP(Tt, Pt)
         if self.verifyDefined():
             self.evaluate()
         
         
     def setTotal_hP(self, ht, Pt):
+        ''' Sets total fluid properties based on inpupt total enthalpy and pressure.
+        
+        Args:
+            ht (float): Total enthalpy [J/kg]
+            Pt (float): Total pressure [Pa]
+        '''
         self.total.set_hp(ht, Pt)
         if self.verifyDefined():
             self.evaluate()
         
         
-    def setTotal_hs(self, ht, s):
-        self.total.set_hs(ht, s)
+    def setTotal_hs(self, ht, st):
+        ''' Sets total fluid properties based on inpupt total enthalpy and entropy.
+        
+        Args:
+            ht (float): Total temperature [J/kg]
+            st (float): Total entropy [J/kgK]
+        '''
+        self.total.set_hs(ht, st)
         if self.verifyDefined():
             self.evaluate()
     
     
-    def setTotal_sP(self, s, Pt):
-        self.total.set_sp(s, Pt)
+    def setTotal_sP(self, st, Pt):
+        ''' Sets total fluid properties based on inpupt total entropy and pressure.
+        
+        Args:
+            st (float): Total entropy [J/kgK]
+            Pt (float): Total pressure [Pa]
+        '''
+        self.total.set_sp(st, Pt)
         if self.verifyDefined():
             self.evaluate()
         
         
     def verifyDefined(self):
+        '''Verifies whether the physical flow quantities are defined enough to be evaluated.
+        
+        Returns:
+            True if ready for evaluation, False if not.
+        '''
         if self.mdot is None:
             return 0
         if self.MN is None and self.A is None:
