@@ -8,12 +8,11 @@ name = "pyProp"
 version = "0!1.0.0a1"
 
 dependencies = [
-    "bisect",
-    "copy",
     "networkx",
     "numpy",
     "pytest",
     "sphinx",
+    "sphinx_rtd_theme",
 ]
 
 requires-python = ">= 3.8"
