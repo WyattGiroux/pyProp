@@ -50,6 +50,7 @@ jobs:
         uses: actions/download-artifact@v4  # To download the artifact uploaded in the build step
         with:
           name: github-pages-artifact  # Same name as in the upload step
+          path: docs/_build/html
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v2
