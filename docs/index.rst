@@ -20,7 +20,6 @@ Unit Systems
 ``pyProp`` currently only supports standard SI units.
 
 
-
 .. toctree::
    :maxdepth: 1
    :caption: Table of Contents
@@ -28,4 +27,3 @@ Unit Systems
    _elements/elements
    _general_classes/gen_class
    species
-

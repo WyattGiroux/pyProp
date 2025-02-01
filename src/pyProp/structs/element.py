@@ -3,6 +3,7 @@ class Element:
         self.name = name
         self.ports = {}
         self.options = {}
+        self.drawParams = None
         
     def preexecute(self):
         pass

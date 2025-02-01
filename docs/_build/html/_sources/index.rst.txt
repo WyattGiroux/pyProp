@@ -20,7 +20,6 @@ Unit Systems
 ``pyProp`` currently only supports standard SI units.
 
 
-
 .. toctree::
    :maxdepth: 1
    :caption: Table of Contents

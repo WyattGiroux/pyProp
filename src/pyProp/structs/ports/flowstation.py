@@ -54,6 +54,15 @@ class FlowStation(Port):
         self.mdot = None
     
     
+    def copy(self):
+        '''Copy a FlowStation object
+        
+        Returns:
+            A FlowStation object with identical values to the copied one.
+        '''
+        return deepcopy(self)
+    
+    
     def evaluate(self):
         ''' Updates the physical flow and static quantities.
         

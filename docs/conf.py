@@ -29,7 +29,8 @@ autosummary_generate = True
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-
+coverage_show_missing_items = True  # Show missing documentation items in the output
+coverage_skip_undoc_in_source = False  # Include items without docstrings in the source
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
