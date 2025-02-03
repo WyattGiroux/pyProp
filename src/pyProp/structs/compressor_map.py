@@ -1,39 +1,51 @@
 from os.path import dirname, join
 import numpy as np
 from toml import load
+from scipy.interpolate import RegularGridInterpolator
 
 class CompressorMap:
-    def __init__(self, mapname, relpath='../data/'):
+    def __init__(self, mapname, relpath='../data/', boundsError=False):
         with open(join(dirname(__file__), relpath, mapname)) as mapfile:
             map_raw = load(mapfile)
         
+        # ----- LOAD MAP DATA (DO NOT STORE IN CLASS) ----- #
         # Load the design values of the indepenedent map variables    
         self.Nc_des = map_raw['design']['des_Nc']
         self.R_des = map_raw['design']['des_Rline']
         
         # Load independent grid vectors
-        self.Nc_grid = np.array(map_raw['grid']['grid_Nc'])
-        self.R_grid = np.array(map_raw['grid']['grid_Rline'])
+        Nc_grid = np.array(map_raw['grid']['grid_Nc'])
+        R_grid = np.array(map_raw['grid']['grid_Rline'])
         
         # Get design value indices
-        self.Nc_des_ind = np.where(self.Nc_grid == self.Nc_des)[0]
-        self.R_des_ind  = np.where(self.R_grid  == self.R_des )[0]
+        Nc_des_ind = np.where(Nc_grid == self.Nc_des)[0]
+        R_des_ind  = np.where(R_grid  == self.R_des )[0]
         
         # Load characteristic values
-        self.mc = np.array(map_raw['characteristic']['massflow'])
-        self.efi = np.array(map_raw['characteristic']['isen_efficiency'])
-        self.pr = np.array(map_raw['characteristic']['pressure_ratio'])
+        mc = np.array(map_raw['characteristic']['massflow'])
+        efi = np.array(map_raw['characteristic']['isen_efficiency'])
+        pr = np.array(map_raw['characteristic']['pressure_ratio'])
         
+        # ----- SAVE CLASS DATA ----- #
         # Get design values of characteristics
-        self.mc_des = self.mc[self.Nc_des_ind, self.R_des_ind]
-        self.efi_des = self.efi[self.Nc_des_ind, self.R_des_ind]
-        self.pr_des = self.pr[self.Nc_des_ind, self.R_des_ind]
+        self.mc_des = mc[Nc_des_ind, R_des_ind]
+        self.efi_des = efi[Nc_des_ind, R_des_ind]
+        self.pr_des = pr[Nc_des_ind, R_des_ind]
+        
+        # Get map boundary coordinates
+        self.R_surge, self.R_windmill = R_grid[0],  R_grid[-1]
+        self.N_min,   self.N_max      = Nc_grid[0], Nc_grid[-1]        
         
         # Initialize map scaling as unscaled
         self.s_pr  = 1.0
         self.s_mc  = 1.0
         self.s_Nc  = 1.0
         self.s_efi = 1.0 
+        
+        # Create Interpolators
+        self.mc_itp  = RegularGridInterpolator((Nc_grid, R_grid), mc,  method='linear', bounds_error=boundsError, fill_value=None)
+        self.pr_itp  = RegularGridInterpolator((Nc_grid, R_grid), pr,  method='linear', bounds_error=boundsError, fill_value=None)
+        self.efi_itp = RegularGridInterpolator((Nc_grid, R_grid), efi, method='linear', bounds_error=boundsError, fill_value=None)
         
         
     def set_map_scaling(self, pr_des, mc_des, Nc_des, eff_des):
@@ -43,3 +55,24 @@ class CompressorMap:
         self.s_Nc = Nc_des / self.Nc_des
         
         
+    def surge_margin(self, Nc_descl, mc, pr):
+        pr_surge = self.pr_itp((Nc_descl, self.R_surge))
+        mc_surge = self.mc_itp((Nc_descl, self.R_surge))
+        
+        return (pr_surge * mc) / (pr * mc_surge)
+    
+    
+    def evaluate_map(self, Nc, R):
+        Nc_descl = Nc / self.s_Nc
+        
+        mc_descl = self.mc_itp((Nc_descl, R))
+        pr_descl = self.pr_itp((Nc_descl, R))
+        efi_descl = self.efi_itp((Nc_descl, R))
+        
+        mc = self.s_mc * mc_descl
+        pr = 1.0 + self.s_pr * (pr_descl - 1)
+        efi = self.s_efi * efi_descl
+        
+        sm = self.surge_margin(Nc_descl, mc, pr)
+        
+        return mc, pr, efi, sm

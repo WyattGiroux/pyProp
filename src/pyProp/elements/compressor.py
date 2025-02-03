@@ -105,7 +105,7 @@ class Compressor(Element):
         self.NcqNcDes = self.Nc / self.NcDes
         self.NcPct = self.NcqNcDes * 100
         
-        # tempFlO = FlowStation().copy # FIXME: need to implement flow station copy        
+        tempFlO = self.Fl_I.copy()       
         
         self.calculate()
         
