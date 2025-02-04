@@ -31,7 +31,7 @@ class Assembly:
         
     
     def add_element(self, element:Element):
-        '''Adds an element to the assembly object.
+        '''Adds an element to the assembly.
         
         Args:
             element (Element): Element to be added.
