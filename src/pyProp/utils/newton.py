@@ -161,7 +161,7 @@ def newton_relax(x0, f, J, xLow, xHigh, itermax=500, recalcLim=5, trialMax=10, r
         # If the weighted norm is < 1, solver is converged
         if norm < 1:
             iter_data = {
-                'xs': np.array(xs),
+                'xs': np.array(xs, dtype=object),
                 'dx': np.array(dx, dtype=object),
                 'ns': np.array(ns),
                 'rel': np.array(rel)}

@@ -3,6 +3,8 @@ from ..structs.option import Option
 from ..structs.ports.flowstation import FlowStation
 from ..structs.ports.shaftport import ShaftPort
 
+from ..structs.compressor_map import CompressorMap
+
 from ..data.constants import TSL, PSL
 
 import numpy as np
@@ -28,12 +30,9 @@ class Compressor(Element):
         self.TRdes = 1
         
         # Map Data
-        # TODO: Load map logic
-        self.map = kwargs.get('mapName', None)
-        self.s_pr  = 1
-        self.s_mc  = 1
-        self.s_eff = 1
-        self.s_Nc  = 1
+        self.__loadMap(**kwargs)
+        self.Rdes = self.map.R_des
+        self.R = self.Rdes
         
         # Heat Transfer
         # TODO: Not implemented
@@ -71,8 +70,26 @@ class Compressor(Element):
         self.options['switchDes'] = Option(
             description='Specifies on or off design operation',
             trigger=True,
-            allowedValues=('design', 'offdesign')
+            allowedValues=('design', 'offdesign'),
+            default='design'
         )
+    
+    
+    def __loadMap(self, **kwargs):
+        map_name = kwargs.get('map_name', self.name)
+        map_default_name = kwargs.get('map_default_name', None)
+        map_user_path = kwargs.get('map_user_path', None) # Assume map data is in the pyProp/data directory
+        map_boundserror = kwargs.get('map_boundserror', False) # Allow map extrapolation by default
+        map_method = kwargs.get('map_method', 'linear') # Default to linear extrapolation
+        map_fill_value = kwargs.get('map_fill', None)
+        
+        if map_method not in ['linear', 'slinear', 'cubic', 'quintic']:
+            raise ValueError(f'{map_method} is not a valid method for map interp/extrapolation. \
+                Use:\n> linear\n> slinear\n> cubic\n> quintic')
+        
+        self.map = CompressorMap(map_name, defaultmap_name=map_default_name, 
+                                 usermap_path=map_user_path, boundsError=map_boundserror, 
+                                 method=map_method, fill_value=map_fill_value)
     
     
     def runelement(self):
@@ -100,12 +117,40 @@ class Compressor(Element):
             
             # Set design corrected speed
             self.NcDes = self.Nc
+            
+            self.map.set_map_scaling(self.PRdes, self.mcDes, self.NcDes, self.effDes)
+        else:
+            self.mc, self.PR, self.eff, self.SMN = self.map.evaluate_map(self.Nc, self.R)
         
         # Calculate fractional corr. speed and percent speed
         self.NcqNcDes = self.Nc / self.NcDes
         self.NcPct = self.NcqNcDes * 100
         
-        tempFlO = self.Fl_I.copy()       
+        # Compute the ideal (isentropic) exit properties
+        idealFlO = self.Fl_I.copy()
+        
+        sIdeal = self.Fl_I.st
+        Ptout = self.Fl_I.Pt * self.PR
+        
+        idealFlO.setTotal_sP(sIdeal, Ptout)
+        
+        # Use isentropic efficiency to calculate actual exit properties
+        htout = (idealFlO.ht - self.Fl_I.ht) / self.eff + self.Fl_I.ht
+        # print(self.Fl_I.ht)
+        self.Fl_O.setTotal_hP(htout, Ptout)
+        
+        # Calculate temperature ratio across compressor
+        self.TR = self.Fl_O.Tt / self.Fl_I.Tt
+        if self.options['switchDes'].state == 'design':
+            self.TRdes = self.TR
+            
+        # Calculate polytropic efficieny from the Gibbs eq. definition
+        ds = self.Fl_O.st - self.Fl_I.st
+
+        self.effPoly = (self.Fl_I.Rt * np.log(self.PR)) / (self.Fl_I.Rt * np.log(self.PR) + ds)
+        
+        # Calculate required power (define as positive)
+        self.pwr = self.Fl_I.mdot * (self.Fl_O.ht - self.Fl_I.ht)
         
         self.calculate()
         

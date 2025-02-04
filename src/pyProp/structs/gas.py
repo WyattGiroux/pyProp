@@ -230,7 +230,7 @@ class Gas:
         # If the sovler converged, update the temperature and other quantities.
         # Otherwise, retain the current T
         if sol is not None:
-            self.__dict__['T'] = sol[0]
+            self.__dict__['T'] = float(sol)
             self.__updateState()
             return 1
         else:
@@ -272,7 +272,7 @@ class Gas:
         # If the sovler converged, update the temperature and other quantities.
         # Otherwise, retain the current T
         if sol is not None:
-            self.__dict__['T'] = sol[0]
+            self.__dict__['T'] = float(sol)
             self.__updateState()
             return 1
         else:
@@ -315,7 +315,7 @@ class Gas:
         # If the sovler converged, update the pressure and other quantities.
         # Otherwise, retain the current P
         if sol is not None:
-            self.__dict__['P'] = sol[0]
+            self.__dict__['P'] = float(sol)
             self.__updateState()
             return 1
         else:
@@ -354,3 +354,8 @@ class Gas:
             raise TypeError('Can only set T and P')
         self.__dict__[name] = val
         self.__updateState()
+        
+        
+    def __repr__(self):
+        cls = self.__class__.__name__
+        return f'{cls}:{self.species.name}(P={self.P!r}, T={self.T!r}, h={self.h!r}, s={self.s!r}, phi={self.phi!r}, cp={self.cp!r}, cv={self.cv!r}, g={self.g!r}, a={self.a!r})'
